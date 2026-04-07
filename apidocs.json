@@ -1,0 +1,1148 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API POS FASVTECH",
+    "description": "Documentation API POS FASVTECH",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api-dev.fasvtech.xyz/api/v1",
+      "description": "development"
+    },
+    {
+      "url": "https://api.fasvtech.xyz/api/v1",
+      "description": "production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Authentication"
+    },
+    {
+      "name": "Company",
+      "description": "Company"
+    },
+    {
+      "name": "User",
+      "description": "User"
+    },
+    {
+      "name": "Product",
+      "description": "Product"
+    },
+    {
+      "name": "Category",
+      "description": "Category"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register",
+        "description": "**API Registration Public (Tidak perlu Token untuk mengaksesnya)**\n\nDigunakan untuk melakukan registrasi User agar bisa Login kedalam aplikasi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "username": {
+                    "type": "string",
+                    "example": "ikhsan12345"
+                  },
+                  "fullname": {
+                    "type": "string",
+                    "example": "ikhsan"
+                  },
+                  "company_name": {
+                    "type": "string",
+                    "example": "fast tech"
+                  },
+                  "company_address": {
+                    "type": "string",
+                    "example": "fast tech"
+                  },
+                  "sales_code": {
+                    "type": "string",
+                    "example": "fast tech"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "example": "fast tech"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "password123"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "username",
+                  "fullname",
+                  "company_name",
+                  "company_address",
+                  "sales_code",
+                  "phone_number"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request Successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "statusCode": { "type": "number", "example": 201 },
+                    "message": { "type": "string", "example": "Success register" },
+                    "data": { "type": "null" }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": false },
+                    "statusCode": { "type": "number", "example": 412 },
+                    "message": { "type": "string", "example": "Email already registered." },
+                    "data": { "type": "null" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login",
+        "description": "API Login Public (Tidak perlu Token untuk mengaksesnya).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "password123"
+                  },
+                  "is_web": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "is_mobile": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Berhasil Login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "statusCode": { "type": "number", "example": 200 },
+                    "message": { "type": "string", "example": "login success" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "access_token": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "put": {
+        "tags": ["Authentication"],
+        "summary": "Logout User",
+        "description": "API Private: Perlu Bearer Token.",
+        "responses": {
+          "200": {
+            "description": "Berhasil Logout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "statusCode": { "type": "number", "example": 200 },
+                    "message": { "type": "string", "example": "logout success" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/findUser": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Data User",
+        "description": "API Private: Perlu Bearer Token.",
+        "responses": {
+          "200": {
+            "description": "Berhasil Get Data User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "statusCode": { "type": "number", "example": 200 },
+                    "message": { "type": "string", "example": "success" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string", "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0" },
+                        "username": { "type": "string", "example": "example" },
+                        "fullname": { "type": "string", "example": "exmaple" },
+                        "email": { "type": "string", "example": "example@gmail.com" },
+                        "is_login": { "type": "boolean", "example": true },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T04:18:16.587Z"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T04:18:38.127Z"
+                        },
+                        "is_deleted": { "type": "boolean", "example": false },
+                        "config_account": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "string", "example": "7bd40102-e3c8-4516-b890-be8a76ac3d1a" },
+                              "is_active": { "type": "boolean", "example": true },
+                              "company_id": { "type": "string", "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722" },
+                              "role_id": { "type": "string", "example": "9c11049f-63d0-470b-ad4a-d79f3f702a12" },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2025-03-04T04:18:16.650Z"
+                              },
+                              "updated_at": { "type": "string", "format": "date-time", "nullable": true },
+                              "user_id": { "type": "string", "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0" },
+                              "company": {
+                                "type": "object",
+                                "properties": {
+                                  "id": { "type": "string", "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722" },
+                                  "name": { "type": "string", "example": "fast cafe" },
+                                  "address": { "type": "string", "example": "jl. sudirman" },
+                                  "start_subscribe": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "2025-03-04T04:18:16.780Z"
+                                  },
+                                  "email": { "type": "string", "example": "example@gmail.com" },
+                                  "phone_number": { "type": "string", "example": "082288559679" },
+                                  "created_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "2025-03-04T04:18:16.780Z"
+                                  },
+                                  "updated_at": { "type": "string", "format": "date-time", "nullable": true },
+                                  "sales_code": { "type": "string", "example": "JKL123" },
+                                  "owner_id": { "type": "string", "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0" },
+                                  "end_subscribe": { "type": "string", "format": "date-time", "nullable": true },
+                                  "config": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": { "type": "string", "example": "7f557fb3-0c0f-4062-8533-d7fad6942878" },
+                                      "company_id": {
+                                        "type": "string",
+                                        "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                                      },
+                                      "created_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2025-03-04T04:18:17.267Z"
+                                      },
+                                      "updated_at": { "type": "string", "format": "date-time", "nullable": true },
+                                      "is_open": { "type": "boolean", "example": false }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/updateUser": {
+      "put": {
+        "tags": ["User"],
+        "summary": "Update user",
+        "description": "API Private: Perlu Bearer Token.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID user yang ingin diperbarui"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "fullname": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "nullable": true },
+                  "company_id": { "type": "string", "format": "uuid" },
+                  "role_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["username", "fullname", "email", "company_id", "role_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "format": "uuid" },
+                    "username": { "type": "string" },
+                    "fullname": { "type": "string" },
+                    "password": { "type": "string" },
+                    "email": { "type": "string", "format": "email" },
+                    "is_login": { "type": "boolean" },
+                    "created_at": { "type": "string", "format": "date-time" },
+                    "updated_at": { "type": "string", "format": "date-time" },
+                    "is_deleted": { "type": "boolean" },
+                    "sales_code": { "type": ["string"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid"
+          },
+          "401": {
+            "description": "Unauthorized, perlu Bearer Token"
+          },
+          "404": {
+            "description": "User tidak ditemukan"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/allUsers": {
+      "get": {
+        "tags": ["User"],
+        "summary": "Get All user",
+        "description": "API Private: Perlu Bearer Token.",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID perusahaan untuk mengambil daftar pengguna yang terkait"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List pengguna dalam perusahaan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 200 },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "is_active": { "type": "boolean" },
+                          "company_id": { "type": "string", "format": "uuid" },
+                          "role_id": { "type": "string", "format": "uuid" },
+                          "created_at": { "type": "string", "format": "date-time" },
+                          "updated_at": { "type": "string", "format": "date-time" },
+                          "user_id": { "type": "string", "format": "uuid" },
+                          "users": {
+                            "type": "object",
+                            "properties": {
+                              "id": { "type": "string", "format": "uuid" },
+                              "username": { "type": "string" },
+                              "fullname": { "type": "string" },
+                              "password": { "type": "string" },
+                              "email": { "type": "string", "format": "email" },
+                              "is_login": { "type": "boolean" },
+                              "created_at": { "type": "string", "format": "date-time" },
+                              "updated_at": { "type": "string", "format": "date-time" },
+                              "is_deleted": { "type": "boolean" },
+                              "sales_code": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "skip": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "totalData": { "type": "integer" },
+                    "totalPages": { "type": "integer" },
+                    "currentPage": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/users/addStaff": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Add user staff",
+        "description": "API Private: Memerlukan Bearer Token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "company_id": { "type": "string", "format": "uuid" },
+                  "fullname": { "type": "string" },
+                  "username": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" },
+                  "role_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["company_id", "fullname", "username", "email", "password", "role_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User staff berhasil ditambahkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 200 },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string", "format": "uuid" },
+                        "username": { "type": "string" },
+                        "fullname": { "type": "string" },
+                        "password": { "type": "string" },
+                        "email": { "type": "string", "format": "email" },
+                        "is_login": { "type": "boolean" },
+                        "created_at": { "type": "string", "format": "date-time" },
+                        "updated_at": { "type": "string", "format": "date-time" },
+                        "is_deleted": { "type": "boolean" },
+                        "sales_code": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid (misalnya, email sudah terdaftar)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 400 },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/company/getCompanies": {
+      "get": {
+        "tags": ["Company"],
+        "summary": "Get Data Company By Owner Id",
+        "description": "API Private: Memerlukan Bearer Token.",
+        "parameters": [
+          {
+            "name": "ownerId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID perusahaan untuk mengambil daftar pengguna yang terkait"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil mengambil data perusahaan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 200 },
+                    "message": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "name": { "type": "string" },
+                          "address": { "type": "string" },
+                          "start_subscribe": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "email": { "type": "string", "format": "email" },
+                          "phone_number": { "type": "string" },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "sales_code": { "type": "string" },
+                          "owner_id": { "type": "string", "format": "uuid" },
+                          "end_subsribe": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid (ownerId tidak ditemukan atau format salah)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 400 },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized, token tidak valid atau tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 401 },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data perusahaan tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer", "example": 404 },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/company/getCompanyById/{companyId}": {
+      "get": {
+        "tags": ["Company"],
+        "summary": "Get Data Company",
+        "description": "API Private: Perlu Bearer Token.",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID dari perusahaan yang ingin diambil"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berhasil Get Data Company",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean", "example": true },
+                    "statusCode": { "type": "number", "example": 200 },
+                    "message": { "type": "string", "example": "Success get company data" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string", "format": "uuid", "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722" },
+                        "name": { "type": "string", "example": "Fast Cafe" },
+                        "address": { "type": "string", "example": "Jl. Sudirman" },
+                        "start_subscribe": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T04:18:16.780Z"
+                        },
+                        "email": { "type": "string", "format": "email", "example": "contact@fastcafe.com" },
+                        "phone_number": { "type": "string", "example": "082288559679" },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T04:18:16.780Z"
+                        },
+                        "updated_at": { "type": "string", "format": "date-time", "nullable": true, "example": null },
+                        "sales_code": { "type": "string", "example": "JKL123" },
+                        "owner_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0"
+                        },
+                        "end_subscribe": { "type": "string", "format": "date-time", "nullable": true, "example": null },
+                        "config": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "example": "7f557fb3-0c0f-4062-8533-d7fad6942878"
+                            },
+                            "company_id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "example": "2025-03-04T04:18:17.267Z"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true,
+                              "example": null
+                            },
+                            "is_open": { "type": "boolean", "example": false }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/company/updateCompany": {
+      "put": {
+        "tags": ["Company"],
+        "summary": "Update company data",
+        "description": "API Private: Memerlukan Bearer Token.",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID perusahaan yang akan diperbarui"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "address": { "type": "string" },
+                  "phone_number": { "type": "string" },
+                  "email": { "type": "string", "format": "email" }
+                },
+                "required": ["name", "address", "phone_number", "email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Berhasil memperbarui data perusahaan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "format": "uuid" },
+                    "name": { "type": "string" },
+                    "address": { "type": "string" },
+                    "start_subscribe": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "email": { "type": "string", "format": "email" },
+                    "phone_number": { "type": "string" },
+                    "created_at": { "type": "string", "format": "date-time" },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sales_code": { "type": "string" },
+                    "owner_id": { "type": "string", "format": "uuid" },
+                    "end_subsribe": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Permintaan tidak valid (companyId tidak ditemukan atau format salah)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized, token tidak valid atau tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Data perusahaan tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "boolean" },
+                    "statusCode": { "type": "integer" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/product/postProduct": {
+      "post": {
+        "tags": ["Product"],
+        "summary": "Create Product",
+        "description": "**API Create product Private**",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "minuman"
+                  },
+                  "category_id": {
+                    "type": "string",
+                    "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                  },
+                  "company_id": {
+                    "type": "string",
+                    "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                  },
+                  "purchase_price": {
+                    "type": "number",
+                    "example": 20000
+                  },
+                  "selling_price": {
+                    "type": "number",
+                    "example": 20000
+                  },
+                  "stocks": {
+                    "type": "number",
+                    "example": 10
+                  },
+                  "color": {
+                    "type": "string",
+                    "example": "red"
+                  }
+                },
+                "required": ["name", "company_id", "category_id", "color", "purchase_price", "selling_price", "stocks"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request Successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "90244814-84b4-44d5-b3cf-2b5a2d3a8c1c"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "vietnam drip"
+                        },
+                        "stocks": {
+                          "type": "number",
+                          "example": 10
+                        },
+                        "category_id": {
+                          "type": "string",
+                          "example": "a7bdd108-f676-4c7b-9188-8b45003e0dc8"
+                        },
+                        "purchase_price": {
+                          "type": "number",
+                          "example": 15000
+                        },
+                        "company_id": {
+                          "type": "string",
+                          "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                        },
+                        "selling_price": {
+                          "type": "number",
+                          "example": 5000
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T05:00:28.245Z"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "created_id": {
+                          "type": "string",
+                          "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0"
+                        },
+                        "updated_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "image": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "is_deleted": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "color": {
+                          "type": "string",
+                          "example": "red"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/category/postCategory": {
+      "post": {
+        "tags": ["Category"],
+        "summary": "Create category",
+        "description": "**API Create category Private**",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "minuman"
+                  },
+                  "company_id": {
+                    "type": "string",
+                    "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                  }
+                },
+                "required": ["name", "company_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request Successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "statusCode": {
+                      "type": "number",
+                      "example": 201
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "a7bdd108-f676-4c7b-9188-8b45003e0dc8"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "minuman"
+                        },
+                        "company_id": {
+                          "type": "string",
+                          "example": "b50f1c9f-0d79-4dde-8be2-a0d45ea09722"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-04T04:50:52.436Z"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "created_id": {
+                          "type": "string",
+                          "example": "bd7341c4-ca16-4a11-979e-a640a6f464d0"
+                        },
+                        "updated_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": null
+                        },
+                        "is_deleted": {
+                          "type": "boolean",
+                          "example": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  }
+}
