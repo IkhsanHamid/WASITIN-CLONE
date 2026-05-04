@@ -1,7 +1,11 @@
 import { PrismaClient, Prisma } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { logger } from './logger'
 
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
+
 const prisma = new PrismaClient({
+  adapter,
   log: [
     { emit: 'event', level: 'query' },
     { emit: 'event', level: 'error' },
@@ -20,7 +24,9 @@ prisma.$on('error', (e) => {
 })
 
 export async function connectPrisma() {
-  await prisma.$connect()
+  // Di Prisma v7 dengan adapter, $connect() tidak diperlukan.
+  // Gunakan query ringan sebagai health check koneksi ke DB.
+  await prisma.$queryRaw`SELECT 1`
   logger.info('Prisma Client is connected')
 }
 

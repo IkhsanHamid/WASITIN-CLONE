@@ -1,18 +1,18 @@
-import { userType } from 'src/types/user.type'
+import { updateUser, userType } from '../types/user.type'
 import { logger } from '../config/logger'
 import prisma from '../config/prisma'
 import utils from '../utils/utils'
 
 export const findUserbyPhoneNumber = async (phone: string) => {
   const user = await prisma.users.findFirst({
-    where: { phone, isDeleted: false },
+    where: { phone, is_deleted: false },
     select: {
       id: true,
       name: true,
       phone: true,
       password: true,
       email: true,
-      role: {
+      roles: {
         select: {
           name: true
         }
@@ -20,17 +20,17 @@ export const findUserbyPhoneNumber = async (phone: string) => {
     }
   })
 
-  if (user) {
-    return utils.resSuccess(400, 'already registered', null)
+  if (!user) {
+    return utils.resSuccess(200, 'user not found', null)
   }
 
   const result = {
-    id: user.id,
-    phone: user.phone,
-    name: user.name,
-    role: user.role.name,
-    password: user.password,
-    email: user.email
+    id: user?.id,
+    phone: user?.phone,
+    name: user?.name,
+    role: user?.roles?.name,
+    password: user?.password,
+    email: user?.email
   }
 
   return utils.resSuccess(200, 'success', result)
@@ -38,14 +38,14 @@ export const findUserbyPhoneNumber = async (phone: string) => {
 
 export const findUserbyEmail = async (email: string) => {
   const user = await prisma.users.findFirst({
-    where: { email, isDeleted: false },
+    where: { email, is_deleted: false },
     select: {
       id: true,
       email: true,
       name: true,
       phone: true,
       password: true,
-      role: {
+      roles: {
         select: {
           name: true
         }
@@ -62,7 +62,7 @@ export const findUserbyEmail = async (email: string) => {
     phone: user.phone,
     name: user.name,
     email: user.email,
-    role: user.role.name,
+    role: user.roles.name,
     password: user.password
   }
 
@@ -93,9 +93,9 @@ export const findUserByGoogleId = async (googleId: string) => {
       name: true,
       email: true,
       photo: true,
-      googleId: true,
-      isActive: true,
-      role: { select: { name: true } }
+      google_id: true,
+      is_active: true,
+      roles: { select: { name: true } }
     }
   })
 
@@ -103,7 +103,7 @@ export const findUserByGoogleId = async (googleId: string) => {
 
   return utils.resSuccess(200, 'success', {
     ...user,
-    role: user.role.name
+    role: user.roles.name
   })
 }
 
@@ -121,14 +121,72 @@ export const linkGoogleToUser = async (userId: string, googleId: string, photo: 
       name: true,
       email: true,
       photo: true,
-      isActive: true,
-      role: { select: { name: true } }
+      is_active: true,
+      roles: { select: { name: true } }
     }
   })
 
   return utils.resSuccess(200, 'success', {
     ...user,
-    role: user.role.name,
+    role: user.roles.name,
     isNewUser: false
   })
+}
+
+export const getUserInfo = async (userId: string) => {
+  const user = await prisma.users.findUnique({
+    where: {
+      id: userId
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photo: true,
+      phone: true,
+      province: true,
+      city: true,
+      roles: { select: { name: true } }
+    }
+  })
+
+  return utils.resSuccess(200, 'success', {
+    ...user,
+    role: user?.roles.name
+  })
+}
+
+export const updateUserInfo = async (payload: updateUser, userId: string) => {
+  const users = await prisma.users.findUnique({
+    where: {
+      id: userId
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photo: true,
+      province: true,
+      city: true,
+      phone: true
+    }
+  })
+
+  const datas: updateUser = {
+    name: payload.name ?? users?.name!,
+    email: payload.email ?? users?.email,
+    photo: payload.photo ?? users?.photo!,
+    province: payload.province ?? users?.province!,
+    city: payload.city ?? users?.city!,
+    phone: payload.phone ?? users?.phone!
+  }
+
+  await prisma.users.update({
+    where: {
+      id: users?.id
+    },
+    data: datas
+  })
+
+  return utils.resSuccess(200, 'success', null)
 }

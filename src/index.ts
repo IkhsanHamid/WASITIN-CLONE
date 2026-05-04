@@ -6,6 +6,7 @@ import { routes } from './routes'
 import { logger } from './config/logger'
 import bodyParser from 'body-parser'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 // swagger
 import swaggerUI from 'swagger-ui-express'
@@ -31,18 +32,36 @@ app.use(
   })
 )
 
-// parse body request
-app.use(bodyParser.urlencoded({ extended: true }))
-app.use(bodyParser.json())
+// ========================
+// 🔥 CORS HARUS PALING ATAS
+// ========================
+app.use(
+  cors({
+    origin: true, // reflect origin (AMAN)
+    credentials: true
+  })
+)
 
-// cors access handler
-app.use(cors())
+app.options('*', cors())
+
+// ========================
+// 🔥 HANDLE PREFLIGHT MANUAL (ANTI ERROR)
+// ========================
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', '*')
-  res.setHeader('Access-Control-Allow-Headers', '*')
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
   next()
 })
+
+// ========================
+// BODY PARSER
+// ========================
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }))
+app.use(bodyParser.json({ limit: '50mb' }))
+
+app.set('trust proxy', 1)
+app.use(cookieParser())
 
 app.use(deserializedToken)
 // if (process.env.NODE_ENV === 'production') app.use(logErrMonitorMiddleware)

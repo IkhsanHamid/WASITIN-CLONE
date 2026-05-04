@@ -13,12 +13,13 @@ model roles {
 }
 
 model access_token {
-  id           String   @id @default(uuid()) @db.Uuid
-  access_token String
-  created_at   DateTime @default(now())
-  updated_at   DateTime
-  user_id      String   @db.Uuid
-  user         users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id            String   @id @default(uuid()) @db.Uuid
+  access_token  String
+  created_at    DateTime @default(now())
+  updated_at    DateTime
+  user_id       String   @db.Uuid
+  refresh_token String?
+  user          users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model users {
@@ -35,6 +36,7 @@ model users {
   created_at                              DateTime               @default(now()) @db.Timestamptz(6)
   updated_at                              DateTime?              @db.Timestamptz(6)
   google_id                               String?                @unique @db.VarChar(255)
+  is_deleted                              Boolean                @default(false)
   access_token                            access_token[]
   bookings                                bookings[]
   md_banks                                md_banks[]
@@ -232,4 +234,29 @@ model user_oauth_providers {
   users            users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_oauth_user")
 
   @@unique([provider, provider_id])
+}
+
+model md_cities {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  province_id  String       @db.Uuid
+  code         String       @unique(map: "cities_code_key")
+  name         String
+  type         CityType
+  created_at   DateTime     @default(now())
+  updated_at   DateTime
+  md_provinces md_provinces @relation(fields: [province_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cities_province_id_fkey")
+}
+
+model md_provinces {
+  id         String      @id(map: "provinces_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code       String      @unique(map: "provinces_code_key")
+  name       String
+  created_at DateTime    @default(now())
+  updated_at DateTime
+  md_cities  md_cities[]
+}
+
+enum CityType {
+  KABUPATEN
+  KOTA
 }

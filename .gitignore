@@ -13,4 +13,4 @@ DS_STORE
 
 .package.lock.json
 .env
-pos-app.pem
+firebase.json

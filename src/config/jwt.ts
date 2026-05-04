@@ -1,50 +1,38 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import jwt from 'jsonwebtoken'
 import CONFIG from './environment'
-import { findUserbyEmail } from '../services/user.service'
 
-export const signJWT = (payload: Object, options?: jwt.SignOptions | undefined) => {
+export const signAccessToken = (payload: object) => {
   return jwt.sign(payload, CONFIG.jwt_private, {
-    ...(options && options),
-    algorithm: 'RS256'
+    algorithm: 'RS256',
+    expiresIn: '15m' // short-lived
   })
 }
 
-export const verifyJWT = (token: string) => {
+export const signRefreshToken = (payload: object) => {
+  // Gunakan secret simetris untuk refresh token (lebih ringan)
+  const secret = process.env.REFRESH_TOKEN_SECRET as string
+  return jwt.sign(payload, secret, { expiresIn: '30d' })
+}
+
+export const verifyAccessToken = (token: string) => {
   try {
-    const decode = jwt.verify(token, CONFIG.jwt_public)
-    return {
-      valid: true,
-      expired: false,
-      decoded: decode
-    }
+    const decoded = jwt.verify(token, CONFIG.jwt_public)
+    return { valid: true, expired: false, decoded }
   } catch (error: any) {
     return {
       valid: false,
-      expired: error.message === 'jwt is expired or not eligible to use',
+      expired: error.message === 'jwt expired',
       decoded: null
     }
   }
 }
 
-export const reIssueAccessToken = async (refreshToken: string) => {
-  const { decoded } = verifyJWT(refreshToken) as any
-  if (!decoded && !decoded.username) {
-    return false
-  }
-
-  const user = await findUserbyEmail(decoded.email)
-
-  if (!user.data) {
-    return false
-  }
-  const data = { ...user.data }
-  const accessToken = signJWT(data, { expiresIn: '1d' })
-  const username = decoded.username
-
-  return {
-    accessToken,
-    username,
-    user_id: user.data.id
+export const verifyRefreshToken = (token: string) => {
+  try {
+    const secret = process.env.REFRESH_TOKEN_SECRET as string
+    const decoded = jwt.verify(token, secret)
+    return { valid: true, decoded }
+  } catch {
+    return { valid: false, decoded: null }
   }
 }

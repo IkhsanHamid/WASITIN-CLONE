@@ -1,14 +1,16 @@
-// import { allUsers, createUserStaff, getUserInfo, updateUserInfo } from '../services/user.service'
-// import { logger } from '../config/logger'
-// import { type Request, type Response } from 'express'
-// import { type responseController } from '../types/global.type'
+import { logger } from '../config/logger'
+import { type Request, type Response } from 'express'
+import { type responseController } from '../types/global.type'
+import { getUserInfo, updateUserInfo } from '../services/user.service'
+import { sendBadRequest, sendError, sendSuccess } from '../utils/response.helper'
+import { updateUserValidation } from '../validations/user.validation'
 // import { staffValidation } from '../validations/user.validation'
 // import { hashing } from '../config/hashing'
 
 // export const getUserController = async (req: Request, res: Response): Promise<Response<responseController>> => {
 //   try {
 //     const user = await getUserInfo(req.locals.code)
-//     return res.status(200).send({ status: true, statusCode: 200, message: user.msg, data: user.data })
+//     return res.status(200).send({ status: true, statusCode: 200, message: 'success', data: user.data })
 //   } catch (error) {
 //     logger.error('ERR: category - get = ', error)
 //     return res.status(422).send({ status: false, statusCode: 422, message: error })
@@ -87,3 +89,28 @@
 //     return res.status(422).send({ status: false, statusCode: 422, message: errorMsg })
 //   }
 // }
+
+export const updateUserData = async (req: Request, res: Response): Promise<void> => {
+  // START: validation payload
+  const { error, value } = updateUserValidation(req.body)
+  if (error) {
+    logger.error('ERR: user - add staff = ', error.details[0].message)
+    sendBadRequest(res, error.details[0].message)
+  }
+  // END: validation payload
+  try {
+    const { id } = req.params
+
+    // Deteksi apakah UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+    if (!id || !isUuid) {
+      sendBadRequest(res, 'Id tidak ditemukan')
+    }
+
+    await updateUserInfo(value, id)
+    sendSuccess(res, null, 'Berhasil update data')
+  } catch (error) {
+    sendError(res, 'Terjadi kesalahan server', 500, error)
+  }
+}
