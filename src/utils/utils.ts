@@ -1,6 +1,6 @@
 import { logger } from '../config/logger'
 import crypto from 'crypto-js'
-import { Response } from 'express'
+import cryptojs from 'crypto'
 
 const SECRET_KEY = process.env.SECRET_KEY
 
@@ -8,7 +8,26 @@ if (!SECRET_KEY) {
   throw new Error('SECRET_KEY is not defined in the environment variables')
 }
 
+const generateRandomPassword = (length: number = 8): string => {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
+  const numbers = '0123456789'
+  const allChars = uppercase + lowercase + numbers
+
+  let password = ''
+  password += uppercase[cryptojs.randomInt(uppercase.length)]
+  password += lowercase[cryptojs.randomInt(lowercase.length)]
+  password += numbers[cryptojs.randomInt(numbers.length)]
+
+  for (let i = 3; i < length; i++) {
+    password += allChars[cryptojs.randomInt(allChars.length)]
+  }
+
+  return password.split('').sort(() => 0.5 - Math.random()).join('')
+}
+
 export default {
+  generateRandomPassword,
   parseBodyNumber: (body: string): number => {
     return parseInt(body, 10)
   },

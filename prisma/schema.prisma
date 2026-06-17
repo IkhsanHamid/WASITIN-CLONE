@@ -49,15 +49,22 @@ model users {
   roles                                   roles                  @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_role")
 }
 
+enum RoleReferee {
+  MAIN_REFEREE
+  ASSISTANT_REFEREE
+  LINE_REFEREE_1
+  LINE_REFEREE_2
+}
+
 model booking_details {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  booking_id   String   @db.Uuid
-  referee_id   String   @db.Uuid
-  main_referee Boolean  @default(false)
-  confirmation Boolean  @default(false)
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  bookings     bookings @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bdetail_booking")
-  referees     referees @relation(fields: [referee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bdetail_referee")
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  booking_id   String      @db.Uuid
+  referee_id   String      @db.Uuid
+  role_referee RoleReferee
+  confirmation Boolean     @default(false)
+  created_at   DateTime    @default(now()) @db.Timestamptz(6)
+  bookings     bookings    @relation(fields: [booking_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bdetail_booking")
+  referees     referees    @relation(fields: [referee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bdetail_referee")
 }
 
 model bookings {
@@ -65,10 +72,11 @@ model bookings {
   user_id         String            @db.Uuid
   schedule_id     String            @db.Uuid
   book_id         String            @db.VarChar(255)
-  location        String            @db.VarChar(255)
-  address         String            @db.VarChar(255)
-  longitude       Decimal           @db.Decimal(10, 7)
-  latitude        Decimal           @db.Decimal(10, 7)
+  location        String?            @db.VarChar(255)
+  address         String?            @db.VarChar(255)
+  longitude       Decimal?           @db.Decimal(10, 7)
+  latitude        Decimal?           @db.Decimal(10, 7)
+  link_google_maps String?            @db.VarChar(255)
   totals          Int
   type_match      String            @db.VarChar(255)
   type_time       String            @db.VarChar(255)
@@ -192,18 +200,22 @@ model referee_sports {
 }
 
 model referees {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id         String            @db.Uuid
-  bio             String?           @db.VarChar(255)
-  is_verification Boolean           @default(false)
-  photos          String[]          @default([]) @db.VarChar(255)
-  booking_details booking_details[]
-  licenses        licenses[]
-  ratings         ratings[]
-  referee_banks   referee_banks[]
-  referee_sports  referee_sports[]
-  users           users             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_referees_user")
-  schedules       schedules[]
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String                 @db.Uuid
+  bio                   String?                @db.VarChar(255)
+  photo_profile         String?                @db.VarChar(255)
+  is_verification       Boolean                @default(false)
+  verification_reason   String?                @db.VarChar(255)
+  recheck_data          Boolean                @default(false)
+  photos                String[]               @default([]) @db.VarChar(255)
+  booking_details       booking_details[]
+  licenses              licenses[]
+  ratings               ratings[]
+  referee_banks         referee_banks[]
+  referee_sports        referee_sports[]
+  users                 users                  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_referees_user")
+  schedules             schedules[]
+  referee_availability  referee_availability[]
 }
 
 model schedules {
@@ -259,4 +271,25 @@ model md_provinces {
 enum CityType {
   KABUPATEN
   KOTA
+}
+
+model password_reset {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique @db.VarChar(255)
+  otp       String   @db.VarChar(6)
+  expires_at DateTime @db.Timestamptz(6)
+  is_used   Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model referee_availability {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referee_id  String    @db.Uuid
+  date        DateTime  @db.Date
+  start_time  String    @db.VarChar(5)
+  end_time    String    @db.VarChar(5)
+  is_deleted  Boolean   @default(false)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @db.Timestamptz(6)
+  referees    referees  @relation(fields: [referee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_availability_referee")
 }

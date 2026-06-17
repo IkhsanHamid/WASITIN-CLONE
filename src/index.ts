@@ -14,6 +14,7 @@ import docs from '../apidocs.json'
 
 // import logErrMonitorMiddleware from './middleware/api-log'
 import deserializedToken from './middleware/deserialirizedToken'
+import localeMiddleware from './middleware/locale'
 import prisma, { connectPrisma } from './config/prisma'
 import { errorHandler } from './middleware/error-handler'
 
@@ -62,6 +63,8 @@ app.use(bodyParser.json({ limit: '50mb' }))
 
 app.set('trust proxy', 1)
 app.use(cookieParser())
+
+app.use(localeMiddleware)
 
 app.use(deserializedToken)
 // if (process.env.NODE_ENV === 'production') app.use(logErrMonitorMiddleware)

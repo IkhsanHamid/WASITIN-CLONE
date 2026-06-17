@@ -1,4 +1,4 @@
-import { updateUser, userType } from '../types/user.type'
+import { LicenseInput, refereeType, updateUser, userType } from '../types/user.type'
 import { logger } from '../config/logger'
 import prisma from '../config/prisma'
 import utils from '../utils/utils'
@@ -189,4 +189,66 @@ export const updateUserInfo = async (payload: updateUser, userId: string) => {
   })
 
   return utils.resSuccess(200, 'success', null)
+}
+
+export const createUserReferee = async (
+  payload: {
+    name: string
+    email: string
+    phone: string
+    province: string
+    city: string
+    roleId: string
+    photoProfile: string | null
+    photos: string[]
+    sportId: string
+    licenses: LicenseInput[]
+  }
+) => {
+  const referee = await prisma.$transaction(async (tx) => {
+    const user = await tx.users.create({
+      data: {
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        province: payload.province,
+        city: payload.city,
+        role_id: payload.roleId,
+        created_at: new Date()
+      }
+    })
+
+    const referee = await tx.referees.create({
+      data: {
+        user_id: user.id,
+        photo_profile: payload.photoProfile,
+        photos: payload.photos
+      }
+    })
+
+    await tx.referee_sports.create({
+      data: {
+        referee_id: referee.id,
+        sport_id: payload.sportId
+      }
+    })
+    await tx.licenses.createMany({
+      data: payload.licenses.map((l) => ({
+        referee_id: referee.id,
+        name: l.name,
+        license_level: l.licenseLevel,
+        organization: l.organization,
+        no_license: l.noLicense,
+        expired_date: l.expiredDate,
+        date_of_issue: l.dateOfIssue,
+        file_link: l.fileLink,
+        created_at: new Date(),
+        updated_at: new Date()
+      }))
+    })
+
+    return user
+  })
+
+  return utils.resSuccess(201, 'success', referee)
 }

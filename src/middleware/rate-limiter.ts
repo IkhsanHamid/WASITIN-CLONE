@@ -5,7 +5,7 @@ const app = express()
 
 const rateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
-  max: 3, // Maksimum 3 request per IP dalam 1 menit
+  max: 1000, // Maksimum 3 request per IP dalam 1 menit
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
