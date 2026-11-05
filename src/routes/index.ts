@@ -5,6 +5,7 @@ import { userRouter } from './user.routes'
 import { regionRouter } from './region.routes'
 import { masterRouter } from './master.routes'
 import { refereeRouter } from './referee.routes'
+import { bookingRouter } from './booking.routes'
 
 const _routes: Array<[string, Router]> = [
   ['/api/v1/auth', authRouter],
@@ -12,7 +13,8 @@ const _routes: Array<[string, Router]> = [
   ['/api/v1/region', regionRouter],
   ['/api/v1/master', masterRouter],
   ['/api/v1/referee', refereeRouter],
-  ['/api/v1/admin/referees', refereeRouter]
+  ['/api/v1/admin/referees', refereeRouter],
+  ['/api/v1/bookings', bookingRouter]
 ]
 
 export const routes = (app: Application) => {

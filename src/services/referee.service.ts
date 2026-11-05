@@ -2,8 +2,16 @@ import prisma from '../config/prisma'
 import { logger } from '../config/logger'
 import utils from '../utils/utils'
 import { hashing } from '../config/hashing'
-import { sendRefereeVerifiedEmail, sendRefereeRejectedEmail } from './email-template.service'
-import { addHours, parse, format, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns'
+import {
+  sendRefereeVerifiedEmail,
+  sendRefereeRejectedEmail,
+  sendLicenseConfirmedEmail,
+  sendLicenseRejectedEmail,
+  sendBankRejectedEmail,
+  sendBankConfirmedEmail
+} from './email-template.service'
+import { addHours, addMinutes, parse, format, isWithinInterval, startOfDay, endOfDay, isSameDay, differenceInMinutes } from 'date-fns'
+import { PaginationMeta, PaginatedResult } from '../types/region.type'
 
 export const getAllReferees = async () => {
   try {
@@ -112,7 +120,8 @@ export const getRefereeById = async (id: string) => {
             expired_date: true,
             date_of_issue: true,
             file_link: true,
-            is_verified: true
+            is_verified: true,
+            sport_id: true
           }
         },
         referee_sports: {
@@ -139,7 +148,9 @@ export const getRefereeById = async (id: string) => {
             number_account: true,
             name: true,
             is_verified: true,
-            is_active: true
+            is_active: true,
+            recheck_data: true,
+            reject_reason: true
           }
         },
         ratings: {
@@ -168,6 +179,13 @@ export const getRefereeById = async (id: string) => {
       bio: referee.bio,
       photo_profile: referee.photo_profile,
       is_verification: referee.is_verification,
+      verification_reason: referee.verification_reason,
+      recheck_data: referee.recheck_data,
+      verification: referee.is_verification
+        ? 'Terverifikasi'
+        : referee.recheck_data
+          ? 'Ditolak'
+          : 'Menunggu Verifikasi',
       photos: referee.photos,
       user: referee.users,
       licenses: referee.licenses,
@@ -181,7 +199,8 @@ export const getRefereeById = async (id: string) => {
     }
 
     return utils.resSuccess(200, 'success', result)
-  } catch (error) {
+  } catch (error: any) {
+    console.log('error', error)
     logger.error('ERR: referee - getRefereeById = ', error)
     const formattedError = utils.formatUnexpectedError(error)
     throw formattedError
@@ -872,6 +891,615 @@ export const verifyLicense = async (licenseId: string) => {
   }
 }
 
+export const addRefereeSport = async (
+  userId: string,
+  payload: {
+    sport_id: string
+    name: string
+    license_level: string
+    organization: string
+    no_license: string
+    expired_date: Date
+    date_of_issue: Date
+    file_link: string
+  }
+) => {
+  try {
+    const referee = await prisma.referees.findFirst({
+      where: { user_id: userId }
+    })
+
+    if (!referee) {
+      return utils.resErr(404, 'Profile referee tidak ditemukan', null)
+    }
+
+    const sport = await prisma.md_sports.findUnique({
+      where: { id: payload.sport_id }
+    })
+
+    if (!sport) {
+      return utils.resErr(404, 'Cabang olahraga tidak ditemukan', null)
+    }
+
+    const existingSport = await prisma.referee_sports.findFirst({
+      where: {
+        referee_id: referee.id,
+        sport_id: payload.sport_id
+      }
+    })
+
+    if (existingSport) {
+      return utils.resErr(409, 'Cabang olahraga sudah ditambahkan', null)
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const refereeSport = await tx.referee_sports.create({
+        data: {
+          referee_id: referee.id,
+          sport_id: payload.sport_id
+        }
+      })
+
+      const license = await tx.licenses.create({
+        data: {
+          referee_id: referee.id,
+          sport_id: payload.sport_id,
+          name: payload.name,
+          license_level: payload.license_level,
+          organization: payload.organization,
+          no_license: payload.no_license,
+          expired_date: payload.expired_date,
+          date_of_issue: payload.date_of_issue,
+          file_link: payload.file_link,
+          is_verified: false
+        }
+      })
+
+      return { refereeSport, license }
+    })
+
+    return utils.resSuccess(201, 'Berhasil menambah cabang olahraga, menunggu verifikasi admin', result)
+  } catch (error) {
+    logger.error('ERR: referee - addRefereeSport = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const confirmLicense = async (licenseId: string) => {
+  try {
+    const license = await prisma.licenses.findUnique({
+      where: { id: licenseId },
+      include: {
+        referees: {
+          include: {
+            users: { select: { id: true, name: true, email: true } }
+          }
+        },
+        md_sports: { select: { id: true, name: true } }
+      }
+    })
+
+    if (!license) {
+      return utils.resErr(404, 'License tidak ditemukan', null)
+    }
+
+    const updated = await prisma.licenses.update({
+      where: { id: licenseId },
+      data: { is_verified: true }
+    })
+
+    const refereeName = license.referees.users?.name ?? 'Wasit'
+    const refereeEmail = license.referees.users?.email ?? ''
+    const licenseName = license.name
+    const sportName = license.md_sports?.name ?? ''
+
+    if (refereeEmail) {
+      await sendLicenseConfirmedEmail(refereeName, refereeEmail, licenseName, sportName)
+    }
+
+    return utils.resSuccess(200, 'Lisensi berhasil disetujui', updated)
+  } catch (error) {
+    logger.error('ERR: referee - confirmLicense = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const rejectLicense = async (licenseId: string, reason: string) => {
+  try {
+    const license = await prisma.licenses.findUnique({
+      where: { id: licenseId },
+      include: {
+        referees: {
+          include: {
+            users: { select: { id: true, name: true, email: true } }
+          }
+        },
+        md_sports: { select: { id: true, name: true } }
+      }
+    })
+
+    if (!license) {
+      return utils.resErr(404, 'License tidak ditemukan', null)
+    }
+
+    const updated = await prisma.licenses.update({
+      where: { id: licenseId },
+      data: { is_verified: false }
+    })
+
+    const refereeName = license.referees.users?.name ?? 'Wasit'
+    const refereeEmail = license.referees.users?.email ?? ''
+    const licenseName = license.name
+    const sportName = license.md_sports?.name ?? ''
+    const encryptedId = utils.encryptWithSecret(licenseId)
+
+    if (refereeEmail) {
+      await sendLicenseRejectedEmail(refereeName, refereeEmail, licenseName, sportName, reason, encryptedId)
+    }
+
+    return utils.resSuccess(200, 'Lisensi berhasil ditolak, email telah dikirim', updated)
+  } catch (error) {
+    logger.error('ERR: referee - rejectLicense = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export interface RefereeSportQueryParams {
+  search?: string
+  sport_id?: string
+  status?: 'verified' | 'pending'
+  page?: number
+  limit?: number
+}
+
+export const getAllRefereeSports = async (params: RefereeSportQueryParams = {}): Promise<PaginatedResult<any>> => {
+  try {
+    const { search, sport_id, status, page = 1, limit = 10 } = params
+    const skip = (page - 1) * limit
+
+    const where: Record<string, any> = {
+      sport_id: { not: null },
+      is_deleted: false,
+      referees: {
+        is_verification: true,
+        licenses: {
+          some: { is_verified: true, is_deleted: false }
+        }
+      }
+    }
+
+    if (search) {
+      where.referees.users = { name: { contains: search, mode: 'insensitive' } }
+    }
+
+    if (sport_id) {
+      where.sport_id = sport_id
+    }
+
+    if (status === 'verified') {
+      where.is_verified = true
+    } else if (status === 'pending') {
+      where.is_verified = false
+    }
+
+    const [total, data] = await Promise.all([
+      prisma.licenses.count({ where }),
+      prisma.licenses.findMany({
+        where,
+        include: {
+          referees: {
+            select: {
+              id: true,
+              user_id: true,
+              is_verification: true,
+              users: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  province: true,
+                  city: true
+                }
+              }
+            }
+          },
+          md_sports: {
+            select: { id: true, name: true }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit
+      })
+    ])
+
+    const result = data.map((license) => ({
+      id: license.id,
+      referee: {
+        id: license.referees.id,
+        name: license.referees.users?.name ?? '',
+        email: license.referees.users?.email ?? '',
+        phone: license.referees.users?.phone ?? '',
+        province: license.referees.users?.province ?? '',
+        city: license.referees.users?.city ?? '',
+        is_verification: license.referees.is_verification
+      },
+      sport: license.md_sports,
+      name: license.name,
+      license_level: license.license_level,
+      organization: license.organization,
+      no_license: license.no_license,
+      expired_date: license.expired_date,
+      date_of_issue: license.date_of_issue,
+      file_link: license.file_link,
+      is_verified: license.is_verified,
+      created_at: license.created_at
+    }))
+
+    const totalPages = Math.ceil(total / limit)
+
+    return {
+      data: result,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1
+      }
+    }
+  } catch (error) {
+    logger.error('ERR: referee - getAllRefereeSports = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+// ─── Referee Bank ──────────────────────────────────────────────────────────────
+
+export const createBank = async (
+  userId: string,
+  payload: {
+    bank_code: string
+    number_account: string
+    name: string
+    photo_book: string
+  }
+) => {
+  try {
+    const referee = await prisma.referees.findFirst({
+      where: { user_id: userId }
+    })
+
+    if (!referee) {
+      return utils.resErr(404, 'Profile referee tidak ditemukan', null)
+    }
+
+    const bank = await prisma.referee_banks.create({
+      data: {
+        referee_id: referee.id,
+        updated_id: userId,
+        bank_code: payload.bank_code,
+        number_account: payload.number_account,
+        name: payload.name,
+        photo_book: payload.photo_book,
+        is_verified: false,
+        is_active: true,
+        is_deleted: false
+      }
+    })
+
+    return utils.resSuccess(201, 'Berhasil menambah rekening', bank)
+  } catch (error) {
+    logger.error('ERR: referee - createBank = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const updateBank = async (
+  userId: string,
+  bankId: string,
+  payload: {
+    bank_code?: string
+    number_account?: string
+    name?: string
+    photo_book?: string
+  }
+) => {
+  try {
+    const referee = await prisma.referees.findFirst({
+      where: { user_id: userId }
+    })
+
+    if (!referee) {
+      return utils.resErr(404, 'Profile referee tidak ditemukan', null)
+    }
+
+    const existing = await prisma.referee_banks.findFirst({
+      where: { id: bankId, referee_id: referee.id, is_deleted: false }
+    })
+
+    if (!existing) {
+      return utils.resErr(404, 'Rekening tidak ditemukan', null)
+    }
+
+    const data: Record<string, any> = { updated_id: userId, is_verified: false, recheck_data: false, reject_reason: null }
+    if (payload.bank_code !== undefined) data.bank_code = payload.bank_code
+    if (payload.number_account !== undefined) data.number_account = payload.number_account
+    if (payload.name !== undefined) data.name = payload.name
+    if (payload.photo_book !== undefined) data.photo_book = payload.photo_book
+
+    const bank = await prisma.referee_banks.update({
+      where: { id: bankId },
+      data
+    })
+
+    return utils.resSuccess(200, 'Berhasil update rekening', bank)
+  } catch (error) {
+    logger.error('ERR: referee - updateBank = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const deleteBank = async (userId: string, bankId: string) => {
+  try {
+    const referee = await prisma.referees.findFirst({
+      where: { user_id: userId }
+    })
+
+    if (!referee) {
+      return utils.resErr(404, 'Profile referee tidak ditemukan', null)
+    }
+
+    const existing = await prisma.referee_banks.findFirst({
+      where: { id: bankId, referee_id: referee.id, is_deleted: false }
+    })
+
+    if (!existing) {
+      return utils.resErr(404, 'Rekening tidak ditemukan', null)
+    }
+
+    await prisma.referee_banks.update({
+      where: { id: bankId },
+      data: { is_deleted: true }
+    })
+
+    return utils.resSuccess(200, 'Berhasil menghapus rekening', null)
+  } catch (error) {
+    logger.error('ERR: referee - deleteBank = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const getMyBanks = async (userId: string) => {
+  try {
+    const referee = await prisma.referees.findFirst({
+      where: { user_id: userId }
+    })
+
+    if (!referee) {
+      return utils.resErr(404, 'Profile referee tidak ditemukan', null)
+    }
+
+    const banks = await prisma.referee_banks.findMany({
+      where: { referee_id: referee.id, is_deleted: false },
+      orderBy: { created_at: 'desc' }
+    })
+
+    const bankCodes = [...new Set(banks.map((b) => b.bank_code).filter(Boolean))]
+    const mdBanks = bankCodes.length > 0
+      ? await prisma.md_banks.findMany({ where: { code: { in: bankCodes } } })
+      : []
+    const photoMap = new Map(mdBanks.map((b) => [b.code, b.photo]))
+
+    const result = banks.map((bank) => ({
+      ...bank,
+      bank_photo: photoMap.get(bank.bank_code) ?? null
+    }))
+
+    return utils.resSuccess(200, 'success', result)
+  } catch (error) {
+    logger.error('ERR: referee - getMyBanks = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export interface BankQueryParams {
+  search?: string
+  bank_code?: string
+  status?: 'verified' | 'pending'
+  page?: number
+  limit?: number
+}
+
+export const getAllBanks = async (params: BankQueryParams = {}): Promise<PaginatedResult<any>> => {
+  try {
+    const { search, bank_code, status, page = 1, limit = 10 } = params
+    const skip = (page - 1) * limit
+
+    const where: Record<string, any> = {
+      is_deleted: false,
+      referees: {
+        is_verification: true,
+        licenses: {
+          some: { is_verified: true, is_deleted: false }
+        }
+      }
+    }
+
+    if (search) {
+      where.referees.users = { name: { contains: search, mode: 'insensitive' } }
+    }
+
+    if (bank_code) {
+      where.bank_code = bank_code
+    }
+
+    if (status === 'verified') {
+      where.is_verified = true
+    } else if (status === 'pending') {
+      where.is_verified = false
+    }
+
+    const [total, data] = await Promise.all([
+      prisma.referee_banks.count({ where }),
+      prisma.referee_banks.findMany({
+        where,
+        include: {
+          referees: {
+            select: {
+              id: true,
+              user_id: true,
+              users: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  province: true,
+                  city: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit
+      })
+    ])
+
+    const bankCodes = [...new Set(data.map((b) => b.bank_code).filter(Boolean))]
+    const mdBanks = bankCodes.length > 0
+      ? await prisma.md_banks.findMany({ where: { code: { in: bankCodes } } })
+      : []
+    const photoMap = new Map(mdBanks.map((b) => [b.code, b.photo]))
+
+    const result = data.map((bank) => ({
+      id: bank.id,
+      referee: {
+        id: bank.referees.id,
+        name: bank.referees.users?.name ?? '',
+        email: bank.referees.users?.email ?? '',
+        phone: bank.referees.users?.phone ?? '',
+        province: bank.referees.users?.province ?? '',
+        city: bank.referees.users?.city ?? ''
+      },
+      bank_code: bank.bank_code,
+      number_account: bank.number_account,
+      name: bank.name,
+      photo_book: bank.photo_book,
+      bank_photo: photoMap.get(bank.bank_code) ?? null,
+      is_verified: bank.is_verified,
+      recheck_data: bank.recheck_data,
+      reject_reason: bank.reject_reason,
+      is_active: bank.is_active,
+      created_at: bank.created_at
+    }))
+
+    const totalPages = Math.ceil(total / limit)
+
+    return {
+      data: result,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1
+      }
+    }
+  } catch (error) {
+    logger.error('ERR: referee - getAllBanks = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const confirmBank = async (bankId: string) => {
+  try {
+    const bank = await prisma.referee_banks.findUnique({
+      where: { id: bankId },
+      include: {
+        referees: {
+          include: {
+            users: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    })
+
+    if (!bank) {
+      return utils.resErr(404, 'Rekening tidak ditemukan', null)
+    }
+
+    const updated = await prisma.referee_banks.update({
+      where: { id: bankId },
+      data: { is_verified: true }
+    })
+
+    const refereeName = bank.referees.users?.name ?? 'Wasit'
+    const refereeEmail = bank.referees.users?.email ?? ''
+
+    if (refereeEmail) {
+      await sendBankConfirmedEmail(refereeName, refereeEmail, bank.bank_code, bank.number_account)
+    }
+
+    return utils.resSuccess(200, 'Rekening berhasil diverifikasi', updated)
+  } catch (error) {
+    logger.error('ERR: referee - confirmBank = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
+export const rejectBank = async (bankId: string, reason: string) => {
+  try {
+    const bank = await prisma.referee_banks.findUnique({
+      where: { id: bankId },
+      include: {
+        referees: {
+          include: {
+            users: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
+    })
+
+    if (!bank) {
+      return utils.resErr(404, 'Rekening tidak ditemukan', null)
+    }
+
+    const updated = await prisma.referee_banks.update({
+      where: { id: bankId },
+      data: { is_verified: false, recheck_data: true, reject_reason: reason }
+    })
+
+    const refereeName = bank.referees.users?.name ?? 'Wasit'
+    const refereeEmail = bank.referees.users?.email ?? ''
+
+    if (refereeEmail) {
+      await sendBankRejectedEmail(refereeName, refereeEmail, bank.bank_code, bank.number_account, reason)
+    }
+
+    return utils.resSuccess(200, 'Rekening ditolak, email telah dikirim', updated)
+  } catch (error) {
+    logger.error('ERR: referee - rejectBank = ', error)
+    const formattedError = utils.formatUnexpectedError(error)
+    throw formattedError
+  }
+}
+
 export const getAllPublicReferees = async (
   search?: string,
   sortBy?: string,
@@ -1004,7 +1632,10 @@ export const getAllPublicReferees = async (
           name: rs.md_sports.name
         })),
         license: ref.licenses.length > 0 ? ref.licenses[0].license_level : null,
-        pricing: ref.referee_sports.flatMap((rs) => rs.referee_pricing),
+        pricing: ref.referee_sports.reduce<Record<string, any[]>>((acc, rs) => {
+          acc[rs.md_sports.name] = rs.referee_pricing
+          return acc
+        }, {}),
         min_price: minPrice,
         average_rating: avgRating ? Math.round(avgRating * 100) / 100 : null,
         total_rating: ref.ratings.length,
@@ -1148,7 +1779,10 @@ export const getPublicRefereeById = async (id: string) => {
         name: rs.md_sports.name
       })),
       average_rating: avgRating ? Math.round(avgRating * 100) / 100 : null,
-      pricing: referee.referee_sports.flatMap((rs) => rs.referee_pricing),
+      pricing: referee.referee_sports.reduce<Record<string, any[]>>((acc, rs) => {
+        acc[rs.md_sports.name] = rs.referee_pricing
+        return acc
+      }, {}),
       total_rating: referee.ratings.length,
       completed_bookings: completedBookings,
       ratings: referee.ratings
@@ -1339,11 +1973,7 @@ export const getPublicRefereeAvailability = async (id: string, typeTime: string)
         }
       },
       include: {
-        bookings: {
-          include: {
-            schedules: true
-          }
-        }
+        bookings: true
       }
     })
 
@@ -1362,11 +1992,11 @@ export const getPublicRefereeAvailability = async (id: string, typeTime: string)
       const bookedSlots: Array<{ start: string; end: string }> = []
 
       for (const bd of bookedSchedules) {
-        const schedule = bd.bookings.schedules
-        if (schedule.date >= dayStart && schedule.date <= dayEnd) {
+        const booking = bd.bookings
+        if (booking.date >= dayStart && booking.date <= dayEnd) {
           bookedSlots.push({
-            start: format(schedule.start_time, 'HH:mm'),
-            end: format(schedule.end_time, 'HH:mm')
+            start: format(booking.start_time, 'HH:mm'),
+            end: format(booking.end_time, 'HH:mm')
           })
         }
       }
@@ -1375,10 +2005,12 @@ export const getPublicRefereeAvailability = async (id: string, typeTime: string)
       let currentTime = parse(availability.start_time, 'HH:mm', selectedDate)
       const endLimit = parse(availability.end_time, 'HH:mm', selectedDate)
 
-      const effectiveStartTime = isSameDay(selectedDate, now) ? now : selectedDate
-
       if (isSameDay(selectedDate, now)) {
-        currentTime = parse(format(now, 'HH:mm'), 'HH:mm', selectedDate)
+        const baseStart = parse(availability.start_time, 'HH:mm', selectedDate)
+        const minutesSinceBaseStart = differenceInMinutes(now, baseStart)
+        const slotMinutes = slotDuration * 60
+        const slotsToSkip = Math.max(0, Math.ceil(minutesSinceBaseStart / slotMinutes))
+        currentTime = addHours(baseStart, slotsToSkip * slotDuration)
       }
 
       while (currentTime < endLimit) {
@@ -1387,6 +2019,13 @@ export const getPublicRefereeAvailability = async (id: string, typeTime: string)
         const slotEnd = format(slotEndTime, 'HH:mm')
 
         if (slotEndTime <= endLimit) {
+          if (isSameDay(selectedDate, now)) {
+            if (addMinutes(now, 30) >= currentTime) {
+              currentTime = slotEndTime
+              continue
+            }
+          }
+
           const isBooked = bookedSlots.some((booked) => {
             const bookedStart = parse(booked.start, 'HH:mm', selectedDate)
             const bookedEnd = parse(booked.end, 'HH:mm', selectedDate)

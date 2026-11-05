@@ -21,6 +21,7 @@ export interface Bank {
   id: string
   name: string
   code: string
+  photo: string | null
   created_id: string
   created_at: Date
   updated_at: Date | null
@@ -29,11 +30,13 @@ export interface Bank {
 export interface BankCreatePayload {
   name: string
   code: string
+  photo?: string
 }
 
 export interface BankUpdatePayload {
   name?: string
   code?: string
+  photo?: string
 }
 
 export interface BankQueryParams {
@@ -69,6 +72,36 @@ export interface VoucherQueryParams {
   search?: string
   page?: number
   limit?: number
+}
+
+// ─── Service Fee ───────────────────────────────────────────────
+
+export interface ServiceFee {
+  id: string
+  name: string
+  type: string
+  percentage: number | null
+  amount: number | null
+  type_service: string
+  is_active: boolean
+  created_at: Date
+  updated_at: Date | null
+}
+
+export interface ServiceFeeCreatePayload {
+  name: string
+  type: string
+  percentage?: number
+  amount?: number
+  type_service: string
+}
+
+export interface ServiceFeeUpdatePayload {
+  name?: string
+  type?: string
+  percentage?: number
+  amount?: number
+  type_service?: string
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────

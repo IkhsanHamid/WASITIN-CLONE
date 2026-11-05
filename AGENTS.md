@@ -35,7 +35,7 @@ src/
   controllers/      # Express route handlers (1 per feature)
   services/         # business logic (1 per feature)
   routes/           # Express Router definitions + routes/index.ts wiring
-  middleware/       # auth, deserializedToken, error-handler, multer, rate-limiter
+  middleware/       # auth, deserializedToken, error-handler, locale, multer, rate-limiter
   validations/      # Joi schemas
   types/            # TS type definitions (also in typeRoots)
   utils/            # response helpers, misc utilities
@@ -64,12 +64,27 @@ All routes are registered in `src/routes/index.ts` under `/api/v1/*`. All have t
 
 | Prefix | Feature |
 |---|---|
-| `/api/v1/auth` | Authentication |
-| `/api/v1/users` | Users |
-| `/api/v1/region` | Region |
-| `/api/v1/master` | Master data |
-| `/api/v1/referee` | Referee |
-| `/api/v1/admin/referees` | Admin referee |
+| `/api/v1/auth` | Authentication, login, register, OTP, password reset, referee resubmit |
+| `/api/v1/users` | User profile |
+| `/api/v1/region` | Provinces & cities |
+| `/api/v1/master` | Master data: sports, banks (with photo), vouchers (CRUD via `master.routes.ts`) |
+| `/api/v1/referee` | Referee self-service: profile, pricing, licenses, sports, banks |
+| `/api/v1/admin/referees` | Admin referee: verify, activate/deactivate, license/bank confirm/reject |
+
+The referee router is mounted at BOTH `/api/v1/referee` and `/api/v1/admin/referees` (same router). Admin endpoints are protected by `requiredAdmin` middleware inline on each route.
+
+Key referee endpoints:
+
+| User (requireUser) | Admin (requiredAdmin) |
+|---|---|
+| `GET /profile/me` | `GET /` (list all referees) |
+| `PUT /profile/me` | `GET /:id` |
+| `GET/PUT /pricing/me` | `PUT /:id` |
+| `GET/POST/PUT/DELETE /licenses/me` | `PATCH /:id/verify`, `/activate`, `/deactivate` |
+| `POST /sports/me` (tambah olahraga + license) | `GET /sports` (list sport additions) |
+| `POST/PUT/DELETE/GET /banks/me` (rekening bank) | `PATCH /licenses/:id/confirm`, `/reject` |
+| | `GET /banks` (list bank accounts) |
+| | `PATCH /banks/:id/confirm`, `/reject` |
 
 Swagger docs at `/api-docs`.
 
@@ -95,3 +110,8 @@ Swagger docs at `/api-docs`.
 - **Vercel** build uses `src/index.ts` directly as the serverless function entrypoint (configured in `vercel.json`). The `build` dir is for compilation only.
 - The `start` script (`npx tsc -w`) runs TypeScript watch mode — this is NOT the dev server command. Use `npm run dev` for development.
 - CORS is configured to reflect the origin (`origin: true`) — not restricted to a specific domain.
+- **Route ordering is critical**: Express matches routes in registration order. `GET /:id` (wildcard) must always be registered AFTER any literal single-segment paths like `GET /sports` or `GET /banks`. If `/:id` is registered first, `GET /sports` becomes `getRefereeById("sports")` → invalid UUID error (P2007).
+- **Schema deviations**: `licenses.sport_id` is a nullable FK to `md_sports` (links license to a sport, set when referee adds sport via `POST /sports/me`). `referee_banks.recheck_data` tracks whether a bank was rejected (set `true` by admin reject, reset to `false` on referee update).
+- **`schedules` model removed**: `bookings` now has `referee_sport_id`, `date`, `start_time`, `end_time` directly. `referee_sports` must have a `bookings[]` back-relation for Prisma schema validation. The availability endpoint (`getPublicRefereeAvailability`) queries `bookings` directly, no longer through `schedules`.
+- **`booking.validation.ts`**: removed `schedule_id` from Joi schema (only `date`/`start_time`/`end_time` now).
+- **Email templates** are in `src/services/email-template.service.ts`: `sendOTPEmail`, `sendWelcomeEmail`, `sendRefereePendingVerificationEmail`, `sendRefereeVerifiedEmail`, `sendRefereeRejectedEmail`, `sendLicenseConfirmedEmail`, `sendLicenseRejectedEmail`, `sendBankConfirmedEmail`, `sendBankRejectedEmail`.

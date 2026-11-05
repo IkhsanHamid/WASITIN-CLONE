@@ -71,6 +71,15 @@ const messages: Record<string, string> = {
   'LICENSE.GET_SUCCESS': 'Berhasil mendapatkan license',
   'LICENSE.DELETE_SUCCESS': 'Berhasil menghapus license',
   'LICENSE.VERIFY_SUCCESS': 'Berhasil verifikasi license',
+  'LICENSE.CONFIRM_SUCCESS': 'Lisensi berhasil disetujui',
+  'LICENSE.REJECT_SUCCESS': 'Lisensi berhasil ditolak, email telah dikirim',
+  'LICENSE.REJECT_REASON_REQUIRED': 'Alasan penolakan wajib diisi',
+  'LICENSE.NAME_REQUIRED': 'Nama lisensi wajib diisi',
+  'LICENSE.LEVEL_REQUIRED': 'Level lisensi wajib diisi',
+  'LICENSE.ORGANIZATION_REQUIRED': 'Organisasi wajib diisi',
+  'LICENSE.NUMBER_REQUIRED': 'Nomor lisensi wajib diisi',
+  'LICENSE.EXPIRED_DATE_REQUIRED': 'Tanggal kadaluarsa wajib diisi',
+  'LICENSE.ISSUE_DATE_REQUIRED': 'Tanggal terbit wajib diisi',
 
   // ─── Availability ──────────────────────────────────────────
   'AVAILABILITY.GET_SUCCESS': 'Berhasil mendapatkan ketersediaan',
@@ -83,6 +92,13 @@ const messages: Record<string, string> = {
   'SPORT.UPDATE_SUCCESS': 'Berhasil mengupdate olahraga',
   'SPORT.DELETE_SUCCESS': 'Berhasil menghapus olahraga',
   'SPORT.NAME_REQUIRED': 'Nama olahraga wajib diisi',
+  'SPORT.ADD_SUCCESS': 'Berhasil menambah cabang olahraga',
+  'SPORT.ALREADY_EXISTS': 'Cabang olahraga sudah ditambahkan',
+  'SPORT.INVALID': 'Cabang olahraga tidak ditemukan',
+  'SPORT.FIELD_REQUIRED': 'Cabang olahraga wajib diisi',
+
+  // ─── Referee Sport ────────────────────────────────────────
+  'REFEREE_SPORT.GET_ALL_SUCCESS': 'Berhasil mengambil data cabang olahraga referee',
 
   // ─── Bank ──────────────────────────────────────────────────
   'BANK.GET_ALL_SUCCESS': 'Berhasil mengambil data bank',
@@ -93,12 +109,37 @@ const messages: Record<string, string> = {
   'BANK.NAME_REQUIRED': 'Nama bank wajib diisi',
   'BANK.CODE_REQUIRED': 'Kode bank wajib diisi',
 
+  // ─── Referee Bank ────────────────────────────────────────
+  'REFEREE_BANK.CREATE_SUCCESS': 'Berhasil menambah rekening',
+  'REFEREE_BANK.UPDATE_SUCCESS': 'Berhasil update rekening',
+  'REFEREE_BANK.DELETE_SUCCESS': 'Berhasil menghapus rekening',
+  'REFEREE_BANK.GET_ALL_SUCCESS': 'Berhasil mengambil data rekening',
+  'REFEREE_BANK.NOT_FOUND': 'Rekening tidak ditemukan',
+  'REFEREE_BANK.CONFIRM_SUCCESS': 'Rekening berhasil diverifikasi',
+  'REFEREE_BANK.REJECT_SUCCESS': 'Rekening ditolak, email telah dikirim',
+  'REFEREE_BANK.CODE_REQUIRED': 'Kode bank wajib diisi',
+  'REFEREE_BANK.NUMBER_REQUIRED': 'Nomor rekening wajib diisi',
+  'REFEREE_BANK.NAME_REQUIRED': 'Nama pemilik rekening wajib diisi',
+  'REFEREE_BANK.MIN_ONE_FIELD': 'Minimal satu field harus diisi',
+  'REFEREE_BANK.REJECT_REASON_REQUIRED': 'Alasan penolakan wajib diisi',
+  'REFEREE_BANK.RESUBMIT_SUCCESS': 'Data rekening berhasil dikirim ulang, menunggu verifikasi',
+
   // ─── Voucher ───────────────────────────────────────────────
   'VOUCHER.GET_ALL_SUCCESS': 'Berhasil mengambil data voucher',
   'VOUCHER.GET_SUCCESS': 'Berhasil mengambil data voucher',
   'VOUCHER.CREATE_SUCCESS': 'Berhasil menambah voucher',
   'VOUCHER.UPDATE_SUCCESS': 'Berhasil mengupdate voucher',
   'VOUCHER.DELETE_SUCCESS': 'Berhasil menghapus voucher',
+
+  // ─── Service Fee ─────────────────────────────────────────
+  'SERVICE_FEE.GET_ALL_SUCCESS': 'Berhasil mengambil data biaya layanan',
+  'SERVICE_FEE.GET_SUCCESS': 'Berhasil mengambil data biaya layanan',
+  'SERVICE_FEE.CREATE_SUCCESS': 'Berhasil menambah biaya layanan',
+  'SERVICE_FEE.UPDATE_SUCCESS': 'Berhasil mengupdate biaya layanan',
+  'SERVICE_FEE.DELETE_SUCCESS': 'Berhasil menghapus biaya layanan',
+  'SERVICE_FEE.ACTIVATE_SUCCESS': 'Biaya layanan berhasil diaktifkan',
+  'SERVICE_FEE.NAME_REQUIRED': 'Nama biaya layanan wajib diisi',
+  'SERVICE_FEE.PERCENTAGE_REQUIRED': 'Persentase wajib diisi dan harus angka positif',
   'VOUCHER.NAME_REQUIRED': 'Nama voucher wajib diisi',
   'VOUCHER.NAME_INVALID': 'Nama voucher tidak valid',
   'VOUCHER.TYPE_REQUIRED': 'Tipe voucher wajib diisi',
@@ -116,6 +157,15 @@ const messages: Record<string, string> = {
 
   // ─── User ──────────────────────────────────────────────────
   'USER.UPDATE_SUCCESS': 'Berhasil update data',
+
+  // ─── Booking ───────────────────────────────────────────
+  'BOOKING.CREATE_SUCCESS': 'Booking berhasil dibuat',
+  'BOOKING.PAYLOAD_REQUIRED': 'Payload diperlukan',
+  'BOOKING.PAYLOAD_INVALID': 'Payload tidak valid',
+  'BOOKING.SCHEDULE_NOT_FOUND': 'Jadwal tidak ditemukan',
+  'BOOKING.SCHEDULE_BOOKED': 'Jadwal sudah dibooking',
+  'BOOKING.USER_NOT_FOUND': 'User tidak ditemukan',
+  'BOOKING.MIDTRANS_LOGS_SUCCESS': 'Berhasil mengambil data midtrans logs',
 
   // ─── Generic Success ───────────────────────────────────────
   SUCCESS: 'Success'

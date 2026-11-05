@@ -1,6 +1,6 @@
 import { type Request, type Response } from 'express'
 import { logger } from '../config/logger'
-import { getAllReferees, getRefereeById, updateReferee, deleteReferee, verifyReferee, activateReferee, deactivateReferee, getRefereeProfile, updateRefereeProfile, getRefereePricing, updateRefereePricing, getLicenses, getLicenseById, createLicense, updateLicense, deleteLicense, verifyLicense, getAllPublicReferees, getPublicRefereeById, getRefereeAvailability, updateRefereeAvailability, deleteRefereeAvailability, getPublicRefereeAvailability as getPublicRefereeAvailabilityService, getRecommendedReferees } from '../services/referee.service'
+import { getAllReferees, getRefereeById, updateReferee, deleteReferee, verifyReferee, activateReferee, deactivateReferee, getRefereeProfile, updateRefereeProfile, getRefereePricing, updateRefereePricing, getLicenses, getLicenseById, createLicense, updateLicense, deleteLicense, verifyLicense, addRefereeSport, confirmLicense, rejectLicense, getAllRefereeSports, createBank, updateBank, deleteBank, getMyBanks, getAllBanks, confirmBank, rejectBank, getAllPublicReferees, getPublicRefereeById, getRefereeAvailability, updateRefereeAvailability, deleteRefereeAvailability, getPublicRefereeAvailability as getPublicRefereeAvailabilityService, getRecommendedReferees } from '../services/referee.service'
 import { sendSuccess, sendError, sendNotFound, sendBadRequest } from '../utils/response.helper'
 import { uploadImage } from '../services/upload.service'
 
@@ -356,6 +356,337 @@ export const verifyLicenseData = async (req: Request, res: Response) => {
     sendSuccess(res, data.data, 'Berhasil verifikasi license')
   } catch (error) {
     logger.error('ERR: referee - verifyLicenseData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const addRefereeSportData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const file = req.file
+    const { sport_id, name, license_level, organization, no_license, expired_date, date_of_issue } = req.body
+
+    if (!sport_id) {
+      return void sendBadRequest(res, 'Cabang olahraga wajib diisi')
+    }
+    if (!name) {
+      return void sendBadRequest(res, 'Nama lisensi wajib diisi')
+    }
+    if (!license_level) {
+      return void sendBadRequest(res, 'Level lisensi wajib diisi')
+    }
+    if (!organization) {
+      return void sendBadRequest(res, 'Organisasi wajib diisi')
+    }
+    if (!no_license) {
+      return void sendBadRequest(res, 'Nomor lisensi wajib diisi')
+    }
+    if (!expired_date) {
+      return void sendBadRequest(res, 'Tanggal kadaluarsa wajib diisi')
+    }
+    if (!date_of_issue) {
+      return void sendBadRequest(res, 'Tanggal terbit wajib diisi')
+    }
+
+    let fileLink = ''
+    if (file) {
+      fileLink = await uploadImage(file)
+    }
+
+    const data = await addRefereeSport(userId, {
+      sport_id,
+      name,
+      license_level,
+      organization,
+      no_license,
+      expired_date: new Date(expired_date),
+      date_of_issue: new Date(date_of_issue),
+      file_link: fileLink
+    })
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message, 201)
+  } catch (error) {
+    logger.error('ERR: referee - addRefereeSportData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const getAllRefereeSportsData = async (req: Request, res: Response) => {
+  try {
+    const { search, sport_id, status, page, limit } = req.query
+
+    const parsedPage = page ? Number(page) : undefined
+    const parsedLimit = limit ? Number(limit) : undefined
+
+    if (parsedPage !== undefined && (isNaN(parsedPage) || parsedPage < 1)) {
+      return void sendBadRequest(res, "Parameter 'page' harus berupa angka positif")
+    }
+    if (parsedLimit !== undefined && (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100)) {
+      return void sendBadRequest(res, "Parameter 'limit' harus antara 1 dan 100")
+    }
+
+    const result = await getAllRefereeSports({
+      search: search as string,
+      sport_id: sport_id as string,
+      status: status as 'verified' | 'pending' | undefined,
+      page: parsedPage,
+      limit: parsedLimit
+    })
+
+    sendSuccess(res, result.data, 'Berhasil mengambil data cabang olahraga referee', 200, result.meta)
+  } catch (error) {
+    logger.error('ERR: referee - getAllRefereeSportsData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const confirmLicenseData = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const data = await confirmLicense(id)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - confirmLicenseData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const rejectLicenseData = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+
+    if (!reason) {
+      return void sendBadRequest(res, 'Alasan penolakan wajib diisi')
+    }
+
+    const data = await rejectLicense(id, reason)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - rejectLicenseData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+// ─── Referee Bank ──────────────────────────────────────────────────────────────
+
+export const createBankData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const file = req.file
+    const { bank_code, number_account, name } = req.body
+
+    if (!bank_code) {
+      return void sendBadRequest(res, 'Kode bank wajib diisi')
+    }
+    if (!number_account) {
+      return void sendBadRequest(res, 'Nomor rekening wajib diisi')
+    }
+    if (!name) {
+      return void sendBadRequest(res, 'Nama pemilik rekening wajib diisi')
+    }
+
+    let photoBook = ''
+    if (file) {
+      photoBook = await uploadImage(file)
+    }
+
+    const data = await createBank(userId, {
+      bank_code,
+      number_account,
+      name,
+      photo_book: photoBook
+    })
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message, 201)
+  } catch (error) {
+    logger.error('ERR: referee - createBankData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const updateBankData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const { id } = req.params
+    const file = req.file
+    const { bank_code, number_account, name } = req.body
+
+    if (!bank_code && !number_account && !name && !file) {
+      return void sendBadRequest(res, 'Minimal satu field harus diisi')
+    }
+
+    let photoBook: string | undefined
+    if (file) {
+      photoBook = await uploadImage(file)
+    }
+
+    const data = await updateBank(userId, id, {
+      bank_code,
+      number_account,
+      name,
+      photo_book: photoBook
+    })
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - updateBankData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const resubmitBankData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const { id } = req.params
+    const file = req.file
+    const { bank_code, number_account, name } = req.body
+
+    if (!bank_code && !number_account && !name && !file) {
+      return void sendBadRequest(res, 'Minimal satu field harus diisi')
+    }
+
+    let photoBook: string | undefined
+    if (file) {
+      photoBook = await uploadImage(file)
+    }
+
+    const data = await updateBank(userId, id, {
+      bank_code,
+      number_account,
+      name,
+      photo_book: photoBook
+    })
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, 'Data rekening berhasil dikirim ulang, menunggu verifikasi')
+  } catch (error) {
+    logger.error('ERR: referee - resubmitBankData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const deleteBankData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const { id } = req.params
+    const data = await deleteBank(userId, id)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - deleteBankData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const getMyBanksData = async (req: Request, res: Response) => {
+  try {
+    const userId = req.locals.sub
+    const data = await getMyBanks(userId)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, 'Berhasil mengambil data rekening')
+  } catch (error) {
+    logger.error('ERR: referee - getMyBanksData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const getAllBanksData = async (req: Request, res: Response) => {
+  try {
+    const { search, bank_code, status, page, limit } = req.query
+
+    const parsedPage = page ? Number(page) : undefined
+    const parsedLimit = limit ? Number(limit) : undefined
+
+    if (parsedPage !== undefined && (isNaN(parsedPage) || parsedPage < 1)) {
+      return void sendBadRequest(res, "Parameter 'page' harus berupa angka positif")
+    }
+    if (parsedLimit !== undefined && (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100)) {
+      return void sendBadRequest(res, "Parameter 'limit' harus antara 1 dan 100")
+    }
+
+    const result = await getAllBanks({
+      search: search as string,
+      bank_code: bank_code as string,
+      status: status as 'verified' | 'pending' | undefined,
+      page: parsedPage,
+      limit: parsedLimit
+    })
+
+    sendSuccess(res, result.data, 'Berhasil mengambil data rekening', 200, result.meta)
+  } catch (error) {
+    logger.error('ERR: referee - getAllBanksData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const confirmBankData = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const data = await confirmBank(id)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - confirmBankData = ', error)
+    sendError(res, 'Terjadi kesalahan server', 500)
+  }
+}
+
+export const rejectBankData = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+
+    if (!reason) {
+      return void sendBadRequest(res, 'Alasan penolakan wajib diisi')
+    }
+
+    const data = await rejectBank(id, reason)
+
+    if (!data.status) {
+      return sendError(res, data.message, data.code || 400)
+    }
+
+    sendSuccess(res, data.data, data.message)
+  } catch (error) {
+    logger.error('ERR: referee - rejectBankData = ', error)
     sendError(res, 'Terjadi kesalahan server', 500)
   }
 }

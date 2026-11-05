@@ -17,6 +17,7 @@ import deserializedToken from './middleware/deserialirizedToken'
 import localeMiddleware from './middleware/locale'
 import prisma, { connectPrisma } from './config/prisma'
 import { errorHandler } from './middleware/error-handler'
+import { startCronJob } from './middleware/cron'
 
 const swaggerUICss = 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui.min.css'
 const app: Application = express()
@@ -78,6 +79,7 @@ routes(app)
     logger.info('Connected to the database')
     app.listen(port, () => {
       logger.info(`Server is listening on port ${port}`)
+      startCronJob()
     })
   } catch (error) {
     console.log('error', error)

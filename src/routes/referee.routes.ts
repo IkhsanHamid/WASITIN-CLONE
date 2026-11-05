@@ -1,6 +1,43 @@
 import { Router } from 'express'
 import { requiredAdmin, requireUser } from '../middleware/auth'
-import { getReferees, getReferee, updateRefereeData, deleteRefereeData, verifyRefereeData, activateRefereeData, deactivateRefereeData, getProfile, updateProfile, getPricing, updatePricing, getLicensesData, getLicenseData, createLicenseData, updateLicenseData, deleteLicenseData, verifyLicenseData, getPublicReferees, getPublicReferee, getAvailability, updateAvailability, deleteAvailability, getPublicRefereeAvailabilityController, getRecommendedRefereesController } from '../controllers/referee.controller'
+import {
+  getReferees,
+  getReferee,
+  updateRefereeData,
+  deleteRefereeData,
+  verifyRefereeData,
+  activateRefereeData,
+  deactivateRefereeData,
+  getProfile,
+  updateProfile,
+  getPricing,
+  updatePricing,
+  getLicensesData,
+  getLicenseData,
+  createLicenseData,
+  updateLicenseData,
+  deleteLicenseData,
+  verifyLicenseData,
+  addRefereeSportData,
+  confirmLicenseData,
+  rejectLicenseData,
+  getAllRefereeSportsData,
+  createBankData,
+  updateBankData,
+  resubmitBankData,
+  deleteBankData,
+  getMyBanksData,
+  getAllBanksData,
+  confirmBankData,
+  rejectBankData,
+  getPublicReferees,
+  getPublicReferee,
+  getAvailability,
+  updateAvailability,
+  deleteAvailability,
+  getPublicRefereeAvailabilityController,
+  getRecommendedRefereesController
+} from '../controllers/referee.controller'
 import upload from '../middleware/multer'
 
 export const refereeRouter: Router = Router()
@@ -10,7 +47,20 @@ refereeRouter.get('/public/:id', getPublicReferee)
 refereeRouter.get('/public/:id/availability', getPublicRefereeAvailabilityController)
 refereeRouter.get('/public/:id/recommendations', getRecommendedRefereesController)
 
+refereeRouter.get('/sports', requiredAdmin, getAllRefereeSportsData)
+
 refereeRouter.get('/', requiredAdmin, getReferees)
+
+refereeRouter.post('/sports/me', requireUser, upload.single('file'), addRefereeSportData)
+
+refereeRouter.post('/banks/me', requireUser, upload.single('file'), createBankData)
+refereeRouter.put('/banks/me/:id/resubmit', requireUser, upload.single('file'), resubmitBankData)
+refereeRouter.put('/banks/me/:id', requireUser, upload.single('file'), updateBankData)
+refereeRouter.delete('/banks/me/:id', requireUser, deleteBankData)
+refereeRouter.get('/banks/me', requireUser, getMyBanksData)
+
+refereeRouter.get('/banks', requiredAdmin, getAllBanksData)
+
 refereeRouter.get('/:id', requiredAdmin, getReferee)
 refereeRouter.put('/:id', requiredAdmin, updateRefereeData)
 refereeRouter.delete('/:id', requiredAdmin, deleteRefereeData)
@@ -19,11 +69,16 @@ refereeRouter.patch('/:id/activate', requiredAdmin, activateRefereeData)
 refereeRouter.patch('/:id/deactivate', requiredAdmin, deactivateRefereeData)
 
 refereeRouter.get('/profile/me', requireUser, getProfile)
-refereeRouter.put('/profile/me', requireUser, upload.fields([
-  { name: 'photo_profile', maxCount: 1 },
-  { name: 'photos', maxCount: 10 },
-  { name: 'license_files', maxCount: 10 }
-]), updateProfile)
+refereeRouter.put(
+  '/profile/me',
+  requireUser,
+  upload.fields([
+    { name: 'photo_profile', maxCount: 1 },
+    { name: 'photos', maxCount: 10 },
+    { name: 'license_files', maxCount: 10 }
+  ]),
+  updateProfile
+)
 
 refereeRouter.get('/pricing/me', requireUser, getPricing)
 refereeRouter.put('/pricing/me', requireUser, updatePricing)
@@ -35,6 +90,11 @@ refereeRouter.put('/licenses/me/:id', requireUser, upload.single('file'), update
 refereeRouter.delete('/licenses/me/:id', requireUser, deleteLicenseData)
 
 refereeRouter.patch('/licenses/:id/verify', requiredAdmin, verifyLicenseData)
+refereeRouter.patch('/licenses/:id/confirm', requiredAdmin, confirmLicenseData)
+refereeRouter.patch('/licenses/:id/reject', requiredAdmin, rejectLicenseData)
+
+refereeRouter.patch('/banks/:id/confirm', requiredAdmin, confirmBankData)
+refereeRouter.patch('/banks/:id/reject', requiredAdmin, rejectBankData)
 
 refereeRouter.get('/availability/me', requireUser, getAvailability)
 refereeRouter.put('/availability/me', requireUser, updateAvailability)
